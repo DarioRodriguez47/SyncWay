@@ -72,23 +72,34 @@ export class FavoritesListBodyComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    // Obtener IDs de favoritos y todas las canciones
-    forkJoin({
-      favoriteIds: this.favoritesService.getUserFavorites(),
-      allTracks: this.tracksService.getAllTracks()
-    })
+    // Obtener favoritos completos desde el backend
+    this.favoritesService.getUserFavoritesFull()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ favoriteIds, allTracks }) => {
-          console.log('✅ Favorite IDs:', favoriteIds);
-          console.log('✅ All tracks:', allTracks.length);
-
-          // Filtrar solo las canciones que están en favoritos
-          this.favoritesList = allTracks.filter(track =>
-            favoriteIds.includes(Number(track._id))
-          );
-
-          console.log('✅ Favorites loaded:', this.favoritesList.length);
+        next: (favorites: any[]) => {
+          // Mapear los objetos song al formato TrackModel esperado por el reproductor
+          this.favoritesList = favorites
+            .map(fav => {
+              const song = fav.song;
+              if (!song) return null;
+              return {
+                _id: song.id,
+                name: song.title,
+                artist: song.artist,
+                album: song.album,
+                cover_url: song.cover_url,
+                url: song.file_path,
+                duration: song.duration,
+                created_at: song.created_at,
+                explicit: song.explicit || false
+              };
+            })
+            .filter(track => !!track);
+          if (this.favoritesList.length === 0) {
+            console.warn('⚠️ No se encontraron favoritos para mostrar.');
+            this.error = 'No tienes canciones favoritas.';
+          }
+          console.log('✅ Favorites loaded:', this.favoritesList.length, this.favoritesList);
           this.loading = false;
         },
         error: (error: any) => {

@@ -8,6 +8,7 @@ import { TracksService } from '@core/services/tracks.service';
 import { MultimediaService } from '@core/services/multimedia.service';
 import { FavoritesService } from '@core/services/favorites.service';
 import { MusicUploadService } from '@core/services/music-upload.service';
+import { PlaylistService } from '@core/services/playlist.service';
 import { Subject, takeUntil, combineLatest, Observable } from 'rxjs';
 
 @Component({
@@ -29,6 +30,10 @@ export class PlayListBodyComponent implements OnInit, OnDestroy {
   editingTrack: TrackModel | null = null;
   editForm: any = {};
 
+  // Estado de playlists
+  playlists: any[] = [];
+  selectedPlaylistId: number | null = null;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -36,10 +41,17 @@ export class PlayListBodyComponent implements OnInit, OnDestroy {
     private multimediaService: MultimediaService,
     private favoritesService: FavoritesService,
     private musicUploadService: MusicUploadService,
-    private http: HttpClient
+    private http: HttpClient,
+    private playlistService: PlaylistService
   ) { } ngOnInit(): void {
     console.log('🎵 PlayListBodyComponent initialized - Loading tracks from API');
     this.loadTracks();
+    // Cargar playlists del usuario (ejemplo: userId=1)
+    this.playlistService.getUserPlaylists(1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(playlists => {
+        this.playlists = playlists || [];
+      });
 
     // Suscribirse a la canción actual
     this.multimediaService.currentTrack
@@ -143,7 +155,9 @@ export class PlayListBodyComponent implements OnInit, OnDestroy {
 
   // 🔥 Métodos para manejar favoritos
   isFavorite(track: TrackModel): boolean {
-    return this.favoriteIds.includes(track._id);
+  const isFav = this.favoriteIds.includes(track._id);
+  console.log('isFavorite', track._id, isFav);
+  return isFav;
   }
 
   toggleFavorite(track: TrackModel): void {
@@ -289,5 +303,20 @@ export class PlayListBodyComponent implements OnInit, OnDestroy {
   onImageErrorHide(event: Event): void {
     const img = event.target as HTMLImageElement;
     img.style.display = 'none';
+  }
+
+  /**
+   * Agregar canción a una lista
+   */
+  addTrackToPlaylist(track: TrackModel, playlistId: number | null): void {
+    if (!playlistId) return;
+    this.playlistService.addTrackToPlaylist(playlistId, track._id).subscribe({
+      next: () => {
+        alert('Canción agregada a la lista');
+      },
+      error: () => {
+        alert('Error al agregar la canción a la lista');
+      }
+    });
   }
 }

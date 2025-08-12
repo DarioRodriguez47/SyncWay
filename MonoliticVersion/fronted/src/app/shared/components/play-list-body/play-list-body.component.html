@@ -1,155 +1,228 @@
 <div class="play-list-body">
-    <!-- Estados de carga y error -->
-    <div *ngIf="loading" class="loading-state">
-        <p>🎵 Cargando playlist...</p>
+  <!-- Estados de carga y error -->
+  <div *ngIf="loading" class="loading-state">
+    <p>🎵 Cargando playlist...</p>
+  </div>
+
+  <div *ngIf="error" class="error-state">
+    <p>❌ {{ error }}</p>
+    <button (click)="retryLoad()" class="retry-btn">🔄 Reintentar</button>
+  </div>
+
+  <!-- Lista vacía -->
+  <div *ngIf="!loading && !error && tracks.length === 0" class="empty-state">
+    <p>📭 No hay canciones disponibles</p>
+  </div>
+
+  <!-- Contenido principal -->
+  <div *ngIf="!loading && !error && tracks.length > 0">
+    <!-- Selector de playlist -->
+    <div class="playlist-selector">
+      <label for="playlistSelect">Agregar a lista:</label>
+      <select id="playlistSelect" [(ngModel)]="selectedPlaylistId">
+        <option [value]="null">Selecciona una lista</option>
+        <option *ngFor="let pl of playlists" [value]="pl.id">
+          {{ pl.name }}
+        </option>
+      </select>
     </div>
+    <!-- Encabezado de la tabla -->
+    <ul class="play-list-table-header">
+      <li (click)="changeSort('name')" class="sortable">Nombre ❤</li>
+      <li (click)="changeSort('album')" class="sortable">Álbum 🆗</li>
+      <li>Fecha incorporación 🍌😁</li>
+      <li><i class="uil uil-clock-eight"></i></li>
+    </ul>
 
-    <div *ngIf="error" class="error-state">
-        <p>❌ {{ error }}</p>
-        <button (click)="retryLoad()" class="retry-btn">🔄 Reintentar</button>
-    </div>
+    <!-- Filas de canciones clickeables -->
+    <ul
+      class="play-list-rows"
+      *ngFor="
+        let track of tracks
+          | orderlist : optionSort.property : optionSort.order;
+        let i = index
+      "
+      (click)="playTrack(track)"
+      [class.current-track]="isCurrentTrack(track)"
+    >
+      <!-- Nombre de la canción con cover -->
+      <li class="track-name">
+        <ng-container
+          *ngTemplateOutlet="coverSection; context: { track: track, index: i }"
+        ></ng-container>
+      </li>
 
-    <!-- Lista vacía -->
-    <div *ngIf="!loading && !error && tracks.length === 0" class="empty-state">
-        <p>📭 No hay canciones disponibles</p>
-    </div>
+      <!-- Álbum -->
+      <li class="track-name-opacity">
+        {{ track.album || "Álbum desconocido" }}
+      </li>
 
-    <!-- Contenido principal -->
-    <div *ngIf="!loading && !error && tracks.length > 0">
-        <!-- Encabezado de la tabla -->
-        <ul class="play-list-table-header">
-            <li (click)="changeSort('name')" class="sortable">
-                Nombre ❤
-            </li>
-            <li (click)="changeSort('album')" class="sortable">
-                Álbum 🆗
-            </li>
-            <li>Fecha incorporación 🍌😁</li>
-            <li><i class="uil uil-clock-eight"></i></li>
-        </ul>
+      <!-- Fecha de incorporación -->
+      <li class="track-name-opacity">
+        {{ formatDate(track.created_at) }}
+      </li>
 
-        <!-- Filas de canciones clickeables -->
-        <ul class="play-list-rows"
-            *ngFor="let item of tracks | orderlist: optionSort.property : optionSort.order; let i = index"
-            (click)="playTrack(item)" [class.current-track]="isCurrentTrack(item)">
-
-            <!-- Nombre de la canción con cover -->
-            <li class="track-name">
-                <ng-container *ngTemplateOutlet="coverSection; context: {track: item, index: i}"></ng-container>
-            </li>
-
-            <!-- Álbum -->
-            <li class="track-name-opacity">
-                {{item.album || 'Álbum desconocido'}}
-            </li>
-
-            <!-- Fecha de incorporación -->
-            <li class="track-name-opacity">
-                {{formatDate(item.created_at)}}
-            </li>
-
-            <!-- Duración -->
-            <li class="track-name-opacity">
-                {{formatDuration(item.duration)}}
-            </li>
-        </ul>
-    </div>
+      <!-- Duración -->
+      <li class="track-name-opacity">
+        {{ formatDuration(track.duration) }}
+      </li>
+    </ul>
+  </div>
 </div>
 
 <!-- Template del cover -->
 <ng-template #coverSection let-track="track" let-index="index">
-    <div class="cover-section">
-        <!-- Indicador de número/reproducción -->
-        <div class="track-number">
-            <span *ngIf="!isCurrentTrack(track)" class="number">{{index + 1}}</span>
-            <i *ngIf="isCurrentTrack(track)" class="uil uil-volume current-playing"></i>
-        </div>
-
-        <!-- Cover de la canción -->
-        <img class="cover-track" [src]="track.cover_url" [alt]="track.name">
-
-        <!-- Información de la canción -->
-        <div class="cover-info">
-            <div class="name-track">
-                {{track.name}}
-            </div>
-            <div class="name-track-details">
-                {{track.artist || 'Artista desconocido'}}
-            </div>
-        </div> <!-- Botón de acción rápida (hover) -->
-        <div class="track-actions">
-            <button class="favorite-btn" (click)="toggleFavorite(track); $event.stopPropagation()"
-                [class.is-favorite]="isFavorite(track)"
-                [title]="isFavorite(track) ? 'Quitar de favoritos' : 'Agregar a favoritos'">
-                <i class="uil uil-heart"></i>
-            </button>
-
-            <button class="action-btn edit-btn" (click)="startEdit(track, $event)" title="Editar información">
-                <i class="uil uil-edit"></i>
-            </button>
-
-            <button class="play-btn" (click)="playTrack(track); $event.stopPropagation()"
-                [title]="isCurrentTrack(track) ? 'Pausar' : 'Reproducir'">
-                <i class="uil" [ngClass]="{
-                    'uil-play': !isCurrentTrack(track),
-                    'uil-pause': isCurrentTrack(track)
-                }"></i>
-            </button>
-
-            <button class="action-btn delete-btn" (click)="deleteSong(track, $event)"
-                title="Eliminar canción permanentemente">
-                <i class="uil uil-trash-alt"></i>
-            </button>
-        </div>
+  <div class="cover-section">
+    <!-- Indicador de número/reproducción -->
+    <div class="track-number">
+      <span *ngIf="!isCurrentTrack(track)" class="number">{{ index + 1 }}</span>
+      <i
+        *ngIf="isCurrentTrack(track)"
+        class="uil uil-volume current-playing"
+      ></i>
     </div>
+
+    <!-- Cover de la canción -->
+    <img class="cover-track" [src]="track.cover_url" [alt]="track.name" />
+
+    <!-- Información de la canción -->
+    <div class="cover-info">
+      <div class="name-track">
+        {{ track.name }}
+      </div>
+      <div class="name-track-details">
+        {{ track.artist || "Artista desconocido" }}
+      </div>
+    </div>
+    <!-- Botón de acción rápida (hover) -->
+    <div class="track-actions">
+      <button
+        class="favorite-btn"
+        (click)="toggleFavorite(track); $event.stopPropagation()"
+        [ngClass]="{ 'favorite-btn': true, 'is-favorite': isFavorite(track) }"
+        [title]="
+          isFavorite(track) ? 'Quitar de favoritos' : 'Agregar a favoritos'
+        "
+      >
+        <i class="uil uil-heart-alt"></i>
+      </button>
+
+      <button
+        class="action-btn edit-btn"
+        (click)="startEdit(track, $event)"
+        title="Editar información"
+      >
+        <i class="uil uil-edit"></i>
+      </button>
+
+      <button
+        class="play-btn"
+        (click)="playTrack(track); $event.stopPropagation()"
+        [title]="isCurrentTrack(track) ? 'Pausar' : 'Reproducir'"
+      >
+        <i
+          class="uil"
+          [ngClass]="{
+            'uil-play': !isCurrentTrack(track),
+            'uil-pause': isCurrentTrack(track)
+          }"
+        ></i>
+      </button>
+
+      <button
+        class="action-btn delete-btn"
+        (click)="deleteSong(track, $event)"
+        title="Eliminar canción permanentemente"
+      >
+        <i class="uil uil-trash-alt"></i>
+      </button>
+
+      <button
+        class="action-btn add-to-playlist-btn"
+        (click)="
+          addTrackToPlaylist(track, selectedPlaylistId);
+          $event.stopPropagation()
+        "
+        [disabled]="!selectedPlaylistId"
+        title="Agregar a lista"
+      >
+        <i class="uil uil-plus"></i>
+      </button>
+    </div>
+  </div>
 </ng-template>
 
 <!-- Modal de edición -->
 <div *ngIf="editingTrack" class="edit-modal-overlay" (click)="cancelEdit()">
-    <div class="edit-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-            <h3>Editar información</h3>
-            <button class="close-btn" (click)="cancelEdit()">
-                <i class="uil uil-times"></i>
-            </button>
-        </div>
-
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="trackTitle">Título</label>
-                <input type="text" id="trackTitle" [(ngModel)]="editForm.title" placeholder="Nombre de la canción">
-            </div>
-
-            <div class="form-group">
-                <label for="trackArtist">Artista</label>
-                <input type="text" id="trackArtist" [(ngModel)]="editForm.artist" placeholder="Nombre del artista">
-            </div>
-
-            <div class="form-group">
-                <label for="trackAlbum">Álbum</label>
-                <input type="text" id="trackAlbum" [(ngModel)]="editForm.album" placeholder="Nombre del álbum">
-            </div>
-
-            <div class="form-group">
-                <label for="trackCover">URL de la carátula</label>
-                <input type="url" id="trackCover" [(ngModel)]="editForm.cover_url"
-                    placeholder="https://ejemplo.com/cover.jpg">
-            </div>
-
-            <!-- Preview de la carátula -->
-            <div class="cover-preview" *ngIf="editForm.cover_url">
-                <img [src]="editForm.cover_url" alt="Preview" (error)="onImageErrorHide($event)">
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="cancelEdit()">
-                Cancelar
-            </button>
-            <button class="btn btn-primary" (click)="saveEdit()" [disabled]="!editForm.title?.trim()">
-                <i class="uil uil-check"></i>
-                Guardar cambios
-            </button>
-        </div>
+  <div class="edit-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Editar información</h3>
+      <button class="close-btn" (click)="cancelEdit()">
+        <i class="uil uil-times"></i>
+      </button>
     </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="trackTitle">Título</label>
+        <input
+          type="text"
+          id="trackTitle"
+          [(ngModel)]="editForm.title"
+          placeholder="Nombre de la canción"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="trackArtist">Artista</label>
+        <input
+          type="text"
+          id="trackArtist"
+          [(ngModel)]="editForm.artist"
+          placeholder="Nombre del artista"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="trackAlbum">Álbum</label>
+        <input
+          type="text"
+          id="trackAlbum"
+          [(ngModel)]="editForm.album"
+          placeholder="Nombre del álbum"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="trackCover">URL de la carátula</label>
+        <input
+          type="url"
+          id="trackCover"
+          [(ngModel)]="editForm.cover_url"
+          placeholder="https://ejemplo.com/cover.jpg"
+        />
+      </div>
+
+      <!-- Preview de la carátula -->
+      <div class="cover-preview" *ngIf="editForm.cover_url">
+        <img
+          [src]="editForm.cover_url"
+          alt="Preview"
+          (error)="onImageErrorHide($event)"
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="cancelEdit()">Cancelar</button>
+      <button
+        class="btn btn-primary"
+        (click)="saveEdit()"
+        [disabled]="!editForm.title?.trim()"
+      >
+        <i class="uil uil-check"></i>
+        Guardar cambios
+      </button>
+    </div>
+  </div>
 </div>

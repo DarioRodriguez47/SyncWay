@@ -11,13 +11,8 @@ def get_user_favorites(user_id):
     try:
         user = User.query.get_or_404(user_id)
         favorites = FavoriteSong.query.filter_by(user_id=user_id).order_by(FavoriteSong.added_at.desc()).all()
-        
-        return ApiResponse.success({
-            'user_id': user_id,
-            'email': user.email,
-            'favorites': [favorite.to_dict() for favorite in favorites],
-            'total_favorites': len(favorites)
-        })
+        # Retornar directamente el array de favoritos para compatibilidad con frontend
+        return ApiResponse.success([favorite.to_dict() for favorite in favorites])
     except Exception as e:
         return ApiResponse.error(f"Error fetching favorites: {str(e)}", 500)
 

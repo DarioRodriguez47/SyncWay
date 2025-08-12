@@ -7,6 +7,7 @@ from app.routes.users import users_bp
 from app.routes.music import music_bp
 from app.routes.favorites import favorites_bp
 from app.routes.chat import chat_bp
+from app.routes.playlists import playlists_bp
 from app.models.database import db
 # Load environment variables
 load_dotenv()
@@ -24,8 +25,9 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
     # Database configuration
+    # Usar SQLite local si no se encuentra DATABASE_URL
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-        'DATABASE_URL')
+        'DATABASE_URL', f"sqlite:///{os.path.join(os.path.dirname(__file__), 'app', 'local.db')}")
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)    # Enable CORS for frontend consumption
@@ -54,6 +56,7 @@ def create_app():
     app.register_blueprint(music_bp, url_prefix='/api/music')
     app.register_blueprint(favorites_bp, url_prefix='/api/favorites')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(playlists_bp, url_prefix='/api/playlists')
 
     # Register SocketIO events
     from app.routes.chat import (
@@ -79,7 +82,7 @@ def create_app():
     def health_check():
         return jsonify({
             'status': 'healthy',
-            'service': 'Music App Backend',
+            'service': 'SyncWave',
             'version': '1.0.0',
             'features': ['REST API', 'WebSocket Chat', 'SQLAlchemy Database']
         })

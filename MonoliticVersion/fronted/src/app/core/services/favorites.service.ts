@@ -13,6 +13,21 @@ export interface FavoriteResponse {
     providedIn: 'root'
 })
 export class FavoritesService {
+    /**
+     * Obtener favoritos completos (con objeto song) desde el backend
+     */
+    getUserFavoritesFull(): Observable<Array<{ song: any }>> {
+        return this.http.get<any>(`${this.API_URL}/user/${this.USER_ID}`).pipe(
+            map(response => {
+                if (response && response.data && Array.isArray(response.data)) {
+                    return response.data;
+                } else if (Array.isArray(response)) {
+                    return response;
+                }
+                return [];
+            })
+        );
+    }
     private readonly API_URL = 'http://localhost:5000/api/favorites';
 
     // Simulamos un user_id por ahora - en una app real vendría del servicio de autenticación

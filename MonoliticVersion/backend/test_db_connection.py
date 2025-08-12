@@ -11,14 +11,19 @@ def get_database_url():
     load_dotenv()  # Carga variables de entorno
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
-        logging.error("No se encontró la variable DATABASE_URL en .env")
-        raise EnvironmentError("No se encontró la variable DATABASE_URL en .env")
+        # Usar SQLite local si no existe DATABASE_URL
+        database_url = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'app', 'local.db')}"
+        logging.warning(f"No se encontró DATABASE_URL, usando SQLite local: {database_url}")
     return database_url
 
 def test_connection(engine):
     try:
         with engine.connect() as connection:
-            result = connection.execute(text("SELECT NOW();"))
+            # Probar consulta según tipo de base de datos
+            if str(engine.url).startswith('sqlite'):
+                result = connection.execute(text("SELECT datetime('now');"))
+            else:
+                result = connection.execute(text("SELECT NOW();"))
             current_time = result.scalar()
             logging.info(f"Conexión exitosa! Hora actual en la DB: {current_time}")
     except SQLAlchemyError as e:

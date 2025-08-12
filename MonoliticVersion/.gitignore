@@ -1,0 +1,34 @@
+# .gitignore para SyncWave
+
+# Node
+fronted/node_modules/
+fronted/dist/
+
+# Python
+backend/__pycache__/
+backend/app/local.db
+backend/.env
+
+# Docker
+postgres_data/
+pgadmin_data/
+
+# IDE/Editor
+.vscode/
+*.swp
+*.swo
+*.bak
+
+# Logs
+*.log
+
+# Otros
+.DS_Store
+Thumbs.db
+
+# Angular build
+fronted/.angular/cache/
+fronted/.angular/tmp/
+
+# Backup y dumps
+/database/backups/
